@@ -12,14 +12,17 @@ import (
 )
 
 func main() {
-	token := os.Getenv("TOKEN")
+	cliId := os.Getenv("CLI_ID")
+	cliSecret := os.Getenv("CLI_SECRET")
 	api := os.Getenv("API")
 
-	if token == "" || api == "" {
-		fmt.Println("no token or api on env")
+	if cliId == "" || cliSecret == "" || api == "" {
+		fmt.Println("missing api address or uaa client credentials")
 		os.Exit(1)
 	}
-	//fmt.Println(token)
+
+	pksMonitor, _ := monitor.NewPksMonitor(api)
+
 	fmt.Printf("monitoring: %s\n", api)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -37,7 +40,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/healthz", healthz)
 
-	go monitor.Run(ctx, cancelFunc, api, token)
+	go pksMonitor.Run(ctx, cancelFunc, api, cliId)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

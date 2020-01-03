@@ -18,28 +18,43 @@ var (
 	})
 )
 
-func init() {
-	prometheus.MustRegister(pksApiUp)
+type PksMonitor struct {
+	pksApi      string
+	accessToken string
+	client      *http.Client
 }
 
-func Run(ctx context.Context, cancelFunc context.CancelFunc, api, token string) {
-	// build api uri to list clusters
-	url := fmt.Sprintf("https://%s:9021/v1/clusters", api)
-	method := "GET"
+type uaaClient struct {
+	clientId     string
+	clientSecret string
+}
 
+func NewPksMonitor(string) (*PksMonitor, error) {
 	// config for skip SSL verification
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client := &http.Client{}
 
+	return &PksMonitor{client: client}, nil
+}
+
+func init() {
+	prometheus.MustRegister(pksApiUp)
+}
+
+func (pks PksMonitor) Run(ctx context.Context, cancelFunc context.CancelFunc, api, token string) {
+	// build api uri to list clusters
+	url := fmt.Sprintf("https://%s:9021/v1/clusters", api)
+	method := "GET"
+
 monitorLoop:
 	for {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			fmt.Println("stopping running. context is done")
 			return
 
 		// executes api request every 10 seconds.
-		case <- time.Tick(10 * time.Second):
+		case <-time.Tick(10 * time.Second):
 			// create request object
 			req, err := http.NewRequest(method, url, nil)
 			if err != nil {
@@ -57,7 +72,7 @@ monitorLoop:
 			req.Header.Add("Content-Type", "application/json")
 
 			// making api request
-			res, err := client.Do(req)
+			res, err := pks.client.Do(req)
 			if err != nil {
 				pksApiUp.Set(0.0)
 				fmt.Println(0)
@@ -67,12 +82,12 @@ monitorLoop:
 			_ = res.Body.Close()
 
 			/*
-			bodyBytes, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			bodyString := string(bodyBytes)
-			fmt.Println(bodyString)
+				bodyBytes, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				bodyString := string(bodyBytes)
+				fmt.Println(bodyString)
 			*/
 			fmt.Printf("response_code: %d\n", res.StatusCode)
 
@@ -87,4 +102,3 @@ monitorLoop:
 	}
 	cancelFunc()
 }
-
