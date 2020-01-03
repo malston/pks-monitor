@@ -29,12 +29,15 @@ type uaaClient struct {
 	clientSecret string
 }
 
-func NewPksMonitor(string) (*PksMonitor, error) {
+func NewPksMonitor(api string) (*PksMonitor, error) {
 	// config for skip SSL verification
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client := &http.Client{}
 
-	return &PksMonitor{client: client}, nil
+	return &PksMonitor{
+		pksApi: api,
+		client: client,
+	}, nil
 }
 
 func init() {
@@ -81,14 +84,6 @@ monitorLoop:
 			}
 			_ = res.Body.Close()
 
-			/*
-				bodyBytes, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				bodyString := string(bodyBytes)
-				fmt.Println(bodyString)
-			*/
 			fmt.Printf("response_code: %d\n", res.StatusCode)
 
 			// check success of api call
