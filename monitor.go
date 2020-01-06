@@ -20,7 +20,7 @@ var (
 	})
 
 	pksApiClusters = ":9021/v1/clusters"
-	pksApiAuth = ":8443/oauth/token"
+	pksApiAuth     = ":8443/oauth/token"
 )
 
 func init() {
@@ -51,9 +51,9 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	client := &http.Client{}
 
 	pksMonitor := &PksMonitor{
-		apiAddress: api,
-		client:     client,
-		uaaCliId: cliId,
+		apiAddress:   api,
+		client:       client,
+		uaaCliId:     cliId,
 		uaaCliSecret: cliSecret,
 	}
 
@@ -63,9 +63,12 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	}
 	pksMonitor.accessToken = token.AccessToken
 
+	fmt.Printf("monitoring: %s\n", api)
+
 	return pksMonitor, nil
 }
 
+// CheckAPI will call the Api and set the prometheus metrics accordingly to it's response
 func (pks PksMonitor) CheckAPI() error {
 	ok, err := pks.callApi()
 	if ok {
@@ -101,20 +104,21 @@ func (pks PksMonitor) callApi() (bool, error) {
 	}
 	defer res.Body.Close()
 
-	fmt.Printf("response_code: %d\n", res.StatusCode)
-
-	// check success of api call
-	if res.StatusCode != 200 {
-		return false, nil
-	}
+	//fmt.Printf("response_code: %d\n", res.StatusCode)
 
 	// check if api resp error is a expired token and try to reconnect
 	if res.StatusCode == 401 || res.StatusCode == 403 {
+		fmt.Println("reauthenticate...")
 		token, err := pks.authenticateApi()
 		if err != nil {
 			return false, err
 		}
 		pks.accessToken = token.AccessToken
+	}
+
+	// check success of api call
+	if res.StatusCode != 200 {
+		return false, nil
 	}
 
 	return true, nil
@@ -151,15 +155,12 @@ func (pks PksMonitor) authenticateApi() (*token, error) {
 		return nil, errors.New(fmt.Sprintf("unable to get API access token: %v - %s", res.Status, body))
 	}
 
+	//unmarshal json resp body to token object
 	var t token
 	err = json.Unmarshal(body, &t)
 	if err != nil {
 		return nil, errors.WithMessage(err, "couldn't unmarshal token response")
 	}
+	fmt.Println("authenticated")
 	return &t, nil
 }
-
-
-
-
-

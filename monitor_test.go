@@ -9,11 +9,11 @@ import (
 
 func TestPksMonitor_callApi(t *testing.T) {
 	type fields struct {
-		apiAddress   string
-		accessToken  string
-		apiUri string
-		respCode int
-		client       *http.Client
+		apiAddress  string
+		accessToken string
+		apiUri      string
+		respCode    int
+		client      *http.Client
 	}
 	tests := []struct {
 		name    string
@@ -23,22 +23,22 @@ func TestPksMonitor_callApi(t *testing.T) {
 	}{
 		{
 			name: "ok",
-			fields: fields {
-				apiAddress:"localhost",
+			fields: fields{
+				apiAddress:  "localhost",
 				accessToken: "fakeToken",
-				respCode: 200,
+				respCode:    200,
 			},
-			want: true,
+			want:    true,
 			wantErr: false,
 		},
 		{
 			name: "not_ok",
-			fields: fields {
-				apiAddress:"localhost",
+			fields: fields{
+				apiAddress:  "localhost",
 				accessToken: "fakeToken",
-				respCode: 500,
+				respCode:    500,
 			},
-			want: false,
+			want:    false,
 			wantErr: false,
 		},
 	}
@@ -50,9 +50,9 @@ func TestPksMonitor_callApi(t *testing.T) {
 			}))
 
 			pks := PksMonitor{
-				apiAddress:   svr.URL,
-				accessToken:  tt.fields.accessToken,
-				client: svr.Client(),
+				apiAddress:  svr.URL,
+				accessToken: tt.fields.accessToken,
+				client:      svr.Client(),
 			}
 			pksApiClusters = ""
 			got, err := pks.callApi()
@@ -70,12 +70,12 @@ func TestPksMonitor_callApi(t *testing.T) {
 func TestPksMonitor_authenticateApi(t *testing.T) {
 	type fields struct {
 		apiAddress   string
-		apiUri string
-		uaaCliId string
+		apiUri       string
+		uaaCliId     string
 		uaaCliSecret string
 		client       *http.Client
-		resp string
-		respCode int
+		resp         string
+		respCode     int
 	}
 	tests := []struct {
 		name    string
@@ -85,26 +85,26 @@ func TestPksMonitor_authenticateApi(t *testing.T) {
 	}{
 		{
 			name: "ok",
-			fields: fields {
-				apiAddress:"localhost",
-				uaaCliId: "fakeId",
+			fields: fields{
+				apiAddress:   "localhost",
+				uaaCliId:     "fakeId",
 				uaaCliSecret: "fakeSecret",
-				respCode: 200,
-				resp: `{ "access_token":"fakeToken"}`,
+				respCode:     200,
+				resp:         `{ "access_token":"fakeToken"}`,
 			},
-			want: "fakeToken",
+			want:    "fakeToken",
 			wantErr: false,
 		},
 		{
 			name: "not_ok",
-			fields: fields {
-				apiAddress:"localhost",
-				uaaCliId: "fakeId",
+			fields: fields{
+				apiAddress:   "localhost",
+				uaaCliId:     "fakeId",
 				uaaCliSecret: "fakeSecret",
-				resp: `{ "error":"Bad Credentials"}`,
-				respCode: 401,
+				resp:         `{ "error":"Bad Credentials"}`,
+				respCode:     401,
 			},
-			want: "",
+			want:    "",
 			wantErr: true,
 		},
 	}
@@ -117,9 +117,9 @@ func TestPksMonitor_authenticateApi(t *testing.T) {
 
 			pks := PksMonitor{
 				apiAddress:   svr.URL,
-				client: svr.Client(),
+				client:       svr.Client(),
 				uaaCliSecret: tt.fields.uaaCliSecret,
-				uaaCliId: tt.fields.uaaCliId,
+				uaaCliId:     tt.fields.uaaCliId,
 			}
 			pksApiAuth = ""
 			got, err := pks.authenticateApi()

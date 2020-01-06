@@ -24,9 +24,6 @@ func main() {
 		fmt.Println("missing api address or uaa client credentials")
 		os.Exit(1)
 	}
-	fmt.Printf("monitoring: %s\n", api)
-	fmt.Printf("monitoring: %s\n", cliSecret)
-	fmt.Printf("monitoring: %s\n", cliId)
 
 	pksMonitor, err := monitor.NewPksMonitor(api, cliId, cliSecret)
 	if err != nil {
@@ -52,8 +49,8 @@ func main() {
 	monitorLoop:
 		for {
 			select {
-			// executes api request every 10 seconds.
-			case <-time.Tick(10 * time.Second):
+			// executes api request every 30 seconds.
+			case <-time.Tick(30 * time.Second):
 				err := pksMonitor.CheckAPI()
 				if err != nil {
 					fmt.Printf("%v\n", err)
