@@ -2,7 +2,7 @@
 
 Monitoring tool checking if PKS API is up and expose metric to Prometheus.
 
-### Usage
+## Usage
 
 Login in UAA as admin and create a UAA Cli for this service:
 ```shell script
@@ -11,7 +11,7 @@ uaa get-client-credentials-token admin --format=opaque -s <Pks Uaa Management Ad
 uaa create-client <uaa-cli-id> -s <uaa-cli-secret> --authorized_grant_types client_credentials --authorities pks.clusters.manage
 ```
 
-## Running locally
+### Running locally
  
 Export the following environment variables:
 ```shell script
@@ -25,9 +25,9 @@ Run with Go:
 go rum cmd/main.go
 ```
 
-Check metrics at: localhost:8080/metrics
+Look for `pks_api_up` metric at: localhost:8080/metrics
  
-## Running with Docker
+### Running with Docker
 Create a `envvars` file with your pks api and uaa config:
 
 ```shell script
@@ -41,5 +41,10 @@ Build image and run container
 ```shell script
 docker build  -t pupimvictor/pks-monitor .
 
- docker run -it -p 8080:8080 --env-file=envvars  pupimvictor/pks-monitor
+docker run -it -p 8080:8080 --env-file=envvars  pupimvictor/pks-monitor
 ```
+
+Look for `pks_api_up` metric at: localhost:8080/metrics
+
+### Running on Kubernetes
+//todo
