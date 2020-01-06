@@ -2,10 +2,13 @@ package monitor
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -17,6 +20,7 @@ var (
 	})
 
 	pksApiClusters = ":9021/v1/clusters"
+	pksApiAuth = ":8443/oauth/token"
 )
 
 func init() {
@@ -32,18 +36,34 @@ type PksMonitor struct {
 	uaaCliSecret string
 }
 
+type token struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+	Scope       string `json:"scope"`
+	Jti         string `json:"jti"`
+}
+
 func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	// config for skip SSL verification
 	// TODO: Support TLS
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client := &http.Client{}
 
-	return &PksMonitor{
+	pksMonitor := &PksMonitor{
 		apiAddress: api,
 		client:     client,
 		uaaCliId: cliId,
 		uaaCliSecret: cliSecret,
-	}, nil
+	}
+
+	token, err := pksMonitor.authenticateApi()
+	if err != nil {
+		return nil, err
+	}
+	pksMonitor.accessToken = token.AccessToken
+
+	return pksMonitor, nil
 }
 
 func (pks PksMonitor) CheckAPI() error {
@@ -88,7 +108,58 @@ func (pks PksMonitor) callApi() (bool, error) {
 		return false, nil
 	}
 
+	// check if api resp error is a expired token and try to reconnect
+	if res.StatusCode == 401 || res.StatusCode == 403 {
+		token, err := pks.authenticateApi()
+		if err != nil {
+			return false, err
+		}
+		pks.accessToken = token.AccessToken
+	}
+
 	return true, nil
 }
+
+func (pks PksMonitor) authenticateApi() (*token, error) {
+	// build api uri to list clusters
+	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiAuth)
+	method := "POST"
+
+	oauthParams := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials&token_format=opaque", pks.uaaCliId, pks.uaaCliSecret)
+	payload := strings.NewReader(oauthParams)
+
+	// create request object
+	req, err := http.NewRequest(method, url, payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "monitor: unable to create new request")
+	}
+
+	req.Header.Add("Accept", " application/json")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// making api request
+	res, err := pks.client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "monitor: unable to make API request")
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+
+	// check success of api call
+	if res.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("unable to get API access token: %v - %s", res.Status, body))
+	}
+
+	var t token
+	err = json.Unmarshal(body, &t)
+	if err != nil {
+		return nil, errors.WithMessage(err, "couldn't unmarshal token response")
+	}
+	return &t, nil
+}
+
+
+
 
 

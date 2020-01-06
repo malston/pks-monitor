@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/pupimvictor/pks-monitor"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,17 +16,22 @@ import (
 )
 
 func main() {
-	cliId := os.Getenv("CLI_ID")
-	cliSecret := os.Getenv("CLI_SECRET")
-	api := os.Getenv("API")
+	cliId := os.Getenv("UAA_CLI_ID")
+	cliSecret := os.Getenv("UAA_CLI_SECRET")
+	api := os.Getenv("PKS_API")
 
 	if cliId == "" || cliSecret == "" || api == "" {
 		fmt.Println("missing api address or uaa client credentials")
 		os.Exit(1)
 	}
-
-	pksMonitor, _ := monitor.NewPksMonitor(api, cliId, cliSecret)
 	fmt.Printf("monitoring: %s\n", api)
+	fmt.Printf("monitoring: %s\n", cliSecret)
+	fmt.Printf("monitoring: %s\n", cliId)
+
+	pksMonitor, err := monitor.NewPksMonitor(api, cliId, cliSecret)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -74,7 +80,7 @@ func main() {
 	}()
 
 	// start http server
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
 		cancelFunc()
