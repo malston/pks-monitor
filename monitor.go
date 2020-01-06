@@ -3,6 +3,7 @@ package monitor
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 )
@@ -14,6 +15,8 @@ var (
 		Name:      "pks_api_up",
 		Help:      "Is the Pks Api up?",
 	})
+
+	pksApiClusters = ":9021/v1/clusters"
 )
 
 func init() {
@@ -24,14 +27,12 @@ type PksMonitor struct {
 	apiAddress  string
 	accessToken string
 	client      *http.Client
+
+	uaaCliId     string
+	uaaCliSecret string
 }
 
-type uaaClient struct {
-	clientId     string
-	clientSecret string
-}
-
-func NewPksMonitor(api string) (*PksMonitor, error) {
+func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	// config for skip SSL verification
 	// TODO: Support TLS
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -40,19 +41,30 @@ func NewPksMonitor(api string) (*PksMonitor, error) {
 	return &PksMonitor{
 		apiAddress: api,
 		client:     client,
+		uaaCliId: cliId,
+		uaaCliSecret: cliSecret,
 	}, nil
 }
 
-func (pks PksMonitor) CallApi() error {
+func (pks PksMonitor) CheckAPI() error {
+	ok, err := pks.callApi()
+	if ok {
+		pksApiUp.Set(1.0)
+	} else {
+		pksApiUp.Set(0.0)
+	}
+	return errors.Wrap(err, "monitor: unable to call API")
+}
+
+func (pks PksMonitor) callApi() (bool, error) {
 	// build api uri to list clusters
-	url := fmt.Sprintf("https://%s:9021/v1/clusters", pks.apiAddress)
+	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiClusters)
 	method := "GET"
 
 	// create request object
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		pksApiUp.Set(0.0)
-		return err
+		return false, errors.Wrap(err, "monitor: unable to create new request")
 	}
 
 	// build headers
@@ -65,8 +77,7 @@ func (pks PksMonitor) CallApi() error {
 	// making api request
 	res, err := pks.client.Do(req)
 	if err != nil {
-		pksApiUp.Set(0.0)
-		return err
+		return false, errors.Wrap(err, "monitor: unable to make API request")
 	}
 	defer res.Body.Close()
 
@@ -74,11 +85,10 @@ func (pks PksMonitor) CallApi() error {
 
 	// check success of api call
 	if res.StatusCode != 200 {
-		pksApiUp.Set(0.0)
-		return nil
+		return false, nil
 	}
-	// set pks api metric to 1
-	pksApiUp.Set(1.0)
 
-	return nil
+	return true, nil
 }
+
+

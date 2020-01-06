@@ -24,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	pksMonitor, _ := monitor.NewPksMonitor(api)
+	pksMonitor, _ := monitor.NewPksMonitor(api, cliId, cliSecret)
 	fmt.Printf("monitoring: %s\n", api)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -48,9 +48,9 @@ func main() {
 			select {
 			// executes api request every 10 seconds.
 			case <-time.Tick(10 * time.Second):
-				err := pksMonitor.CallApi()
+				err := pksMonitor.CheckAPI()
 				if err != nil {
-					fmt.Printf("error calling PKS API: %v\n", err)
+					fmt.Printf("%v\n", err)
 					break monitorLoop
 				}
 
