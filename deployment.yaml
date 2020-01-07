@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pks-monitor
+  namespace: monitoring
+  labels:
+    app: pks-monitor
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pks-monitor
+  template:
+    metadata:
+      name: pks-monitor
+      namespace: monitoring
+      labels:
+        app: pks-monitor
+    spec:
+      containers:
+        - image: "harbor.haas-440.pez.pivotal.io/prometheus/vpupim/pks-monitor:0.1.0"
+          name: pks-monitor
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PKS_API
+              valueFrom:
+                secretKeyRef:
+                  key: pks-api
+                  name: pks-api-monitor
+            - name: UAA_CLI_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pks-api-monitor
+                  key: uaa-cli-id
+            - name: UAA_CLI_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pks-api-monitor
+                  key: uaa-cli-secret
+#          volumeMounts:
+#            - name: certs
+#              mountPath: /etc/pks-monitor/certs
+#              readOnly: true
+#            - name: bosh-target-groups
+#              mountPath: /pks-monitor
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  name: pks-monitor
+  namespace: monitoring
+  labels:
+    app: pks-monitor
+    release: monitoring
+    jobLabel: pks-monitor
+spec:
+  type: NodePort
+  ports:
+    - port: 9190
+      targetPort: 8080
+      protocol: TCP
+      name: http-metrics
+  selector:
+    app: pks-monitor
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pks-monitor
+  labels:
+    app: pks-monitor
+    release: "monitoring"
+spec:
+  selector:
+    matchLabels:
+      app: pks-monitor
+      release: monitoring
+  endpoints:
+    - port: http-metrics
+      interval: 1m
+      scrapeTimeout: 30s
