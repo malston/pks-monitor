@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+var globalCancel context.CancelFunc
+
 func main() {
 	cliId := os.Getenv("UAA_CLI_ID")
 	cliSecret := os.Getenv("UAA_CLI_SECRET")
@@ -31,11 +33,13 @@ func main() {
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	globalCancel = cancelFunc
 
 	// setup http server
 	router := mux.NewRouter()
 	router.Handle("/metrics", promhttp.Handler())
 	router.HandleFunc("/healthz", healthz)
+	router.HandleFunc("/prestop", prestop)
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: router,
@@ -43,7 +47,7 @@ func main() {
 
 	// create OS signal chan for interruptions
 	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	go func() {
 	monitorLoop:
@@ -85,9 +89,17 @@ func main() {
 
 	fmt.Println("gracefully shutting down...")
 	time.Sleep(30 * time.Second)
+	fmt.Println("bye...")
 }
 
 func healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_, _ = io.WriteString(w, `{"status":"ok"}`)
+}
+
+func prestop(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("prestop")
+	globalCancel()
+	w.Header().Add("Content-Type", "application/json")
+	_, _ = io.WriteString(w, `{"status":"shutting down"}`)
 }

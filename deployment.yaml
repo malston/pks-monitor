@@ -22,7 +22,7 @@ spec:
       containers:
         - image: "harbor.haas-440.pez.pivotal.io/prometheus/vpupim/pks-monitor:0.1.0"
           name: pks-monitor
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: PKS_API
               valueFrom:
@@ -49,6 +49,12 @@ spec:
             - containerPort: 8080
               name: http
               protocol: TCP
+          lifecycle:
+            preStop:
+              httpGet:
+                port: 8080
+                path: "/prestop"
+      terminationGracePeriodSeconds: 60
 
 ---
 apiVersion: v1
