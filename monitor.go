@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -17,6 +18,12 @@ var (
 		Subsystem: "opp",
 		Name:      "pks_api_up",
 		Help:      "Is the Pks Api up?",
+	})
+	pksApiLatency = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "wf",
+		Subsystem: "opp",
+		Name:      "pks_api_latency",
+		Help:      "Duration time for a API call",
 	})
 
 	pksApiClusters = ":9021/v1/clusters"
@@ -59,9 +66,12 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 
 	token, err := pksMonitor.authenticateApi()
 	if err != nil {
-		return nil, err
+		fmt.Printf("could not authenticate: %+v\n", err)
 	}
-	pksMonitor.accessToken = token.AccessToken
+
+	if token != nil {
+		pksMonitor.accessToken = token.AccessToken
+	}
 
 	fmt.Printf("monitoring: %s\n", api)
 
@@ -76,10 +86,17 @@ func (pks PksMonitor) CheckAPI() error {
 	} else {
 		pksApiUp.Set(0.0)
 	}
+	fmt.Printf("pks api is up: %t\n", ok)
+
 	return errors.Wrap(err, "monitor: unable to call API")
 }
 
 func (pks PksMonitor) callApi() (bool, error) {
+	start := time.Now()
+	defer func() {
+		pksApiLatency.Set(float64(time.Since(start).Milliseconds()))
+	}()
+
 	// build api uri to list clusters
 	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiClusters)
 	method := "GET"
@@ -104,8 +121,6 @@ func (pks PksMonitor) callApi() (bool, error) {
 	}
 	defer res.Body.Close()
 
-	//fmt.Printf("response_code: %d\n", res.StatusCode)
-
 	// check if api resp error is a expired token and try to reconnect
 	if res.StatusCode == 401 || res.StatusCode == 403 {
 		fmt.Println("reauthenticate...")
@@ -118,14 +133,21 @@ func (pks PksMonitor) callApi() (bool, error) {
 
 	// check success of api call
 	if res.StatusCode != 200 {
+		fmt.Printf("moniotr: error calling pks api. status code: %d\n", res.StatusCode)
 		return false, nil
 	}
 
 	return true, nil
 }
 
-func (pks PksMonitor) authenticateApi() (*token, error) {
-	// build api uri to list clusters
+func (pks PksMonitor) authenticateApi() (t *token, err error) {
+	defer func() {
+		if err != nil {
+			pksApiUp.Set(0.0)
+		}
+	}()
+
+	// build api uri to authenticate
 	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiAuth)
 	method := "POST"
 
@@ -152,15 +174,15 @@ func (pks PksMonitor) authenticateApi() (*token, error) {
 
 	// check success of api call
 	if res.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("unable to get API access token: %v - %s", res.Status, body))
+		return nil, errors.New(fmt.Sprintf("monitor: unable to get API access token: %v - %s", res.Status, body))
 	}
 
 	//unmarshal json resp body to token object
-	var t token
-	err = json.Unmarshal(body, &t)
+	var token token
+	err = json.Unmarshal(body, &token)
 	if err != nil {
-		return nil, errors.WithMessage(err, "couldn't unmarshal token response")
+		return nil, errors.WithMessage(err, "monitor: couldn't unmarshal token response")
 	}
-	fmt.Println("authenticated")
-	return &t, nil
+	t = &token
+	return t, nil
 }
