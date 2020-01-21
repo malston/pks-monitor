@@ -20,7 +20,7 @@ spec:
         app: pks-monitor
     spec:
       containers:
-        - image: "harbor.haas-440.pez.pivotal.io/prometheus/vpupim/pks-monitor:0.1.0"
+        - image: "victorpupim/pks-monitor:0.0.1"
           name: pks-monitor
           imagePullPolicy: Always
           env:
@@ -43,8 +43,6 @@ spec:
 #            - name: certs
 #              mountPath: /etc/pks-monitor/certs
 #              readOnly: true
-#            - name: bosh-target-groups
-#              mountPath: /pks-monitor
           ports:
             - containerPort: 8080
               name: http
@@ -69,12 +67,12 @@ metadata:
     release: monitoring
     jobLabel: pks-monitor
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - port: 9190
+    - name: http-metrics
+      port: 9190
       targetPort: 8080
       protocol: TCP
-      name: http-metrics
   selector:
     app: pks-monitor
 

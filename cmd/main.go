@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/pupimvictor/pks-monitor"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,25 +14,23 @@ import (
 	"time"
 )
 
-var globalCancel context.CancelFunc
-
 func main() {
 	cliId := os.Getenv("UAA_CLI_ID")
 	cliSecret := os.Getenv("UAA_CLI_SECRET")
 	api := os.Getenv("PKS_API")
 
 	if cliId == "" || cliSecret == "" || api == "" {
-		fmt.Println("missing api address or uaa client credentials")
+		fmt.Println("main: missing api address or uaa client credentials")
 		os.Exit(1)
 	}
 
 	pksMonitor, err := monitor.NewPksMonitor(api, cliId, cliSecret)
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+		fmt.Printf("main: could not authenticate to api: %+v\n", err)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	globalCancel = cancelFunc
 
 	// setup http server
 	router := mux.NewRouter()
@@ -57,39 +54,29 @@ func main() {
 			case <-time.Tick(30 * time.Second):
 				err := pksMonitor.CheckAPI()
 				if err != nil {
-					fmt.Printf("%v\n", err)
-					break monitorLoop
+					fmt.Printf("main: could not check api: %+v\n", err)
+					//break monitorLoop
 				}
 
 			// stop process because server stopped working
 			case <-ctx.Done():
-				fmt.Println("stopping running. server stopped working")
+				fmt.Println("main: stopping running. server stopped working")
 				break monitorLoop
 
 			// stop process because OS signal received
 			case sig := <-done:
-				fmt.Printf("stopping running. received OS sig to stop: %s\n", sig.String())
+				fmt.Printf("main: stopping running. received OS sig to stop: %s\n", sig.String())
 				break monitorLoop
 			}
-		}
-
-		err := srv.Shutdown(ctx)
-		if err != nil {
-			fmt.Printf("Server Shutdown Failed: %v\n", err)
-			os.Exit(1)
 		}
 	}()
 
 	// start http server
 	err = srv.ListenAndServe()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("main: server stopped: %+v", err)
 		cancelFunc()
 	}
-
-	fmt.Println("gracefully shutting down...")
-	time.Sleep(30 * time.Second)
-	fmt.Println("bye...")
 }
 
 func healthz(w http.ResponseWriter, r *http.Request) {
@@ -98,8 +85,7 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func prestop(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("prestop")
-	globalCancel()
+	fmt.Println("prestop...")
 	w.Header().Add("Content-Type", "application/json")
 	_, _ = io.WriteString(w, `{"status":"shutting down"}`)
 }
