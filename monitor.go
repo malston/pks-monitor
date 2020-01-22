@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -32,6 +33,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(pksApiUp)
+	prometheus.MustRegister(pksApiLatency)
 }
 
 type PksMonitor struct {
@@ -52,10 +54,21 @@ type token struct {
 }
 
 func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
-	// config for skip SSL verification
-	// TODO: Support TLS
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client := &http.Client{}
+	// Create a CA certificate pool and add cert.pem to it
+	caCert, err := ioutil.ReadFile("/etc/pks-monitor/certs/cert.pem")
+	if err != nil {
+		return nil, errors.WithMessage(err, "monitor: couldn't read certs")
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+	}
 
 	pksMonitor := &PksMonitor{
 		apiAddress:   api,

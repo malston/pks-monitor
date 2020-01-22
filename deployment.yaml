@@ -19,6 +19,10 @@ spec:
       labels:
         app: pks-monitor
     spec:
+      volumes:
+        - name: certs
+          secret:
+            secretName: pks-api-cert
       containers:
         - image: "victorpupim/pks-monitor:0.0.1"
           name: pks-monitor
@@ -39,10 +43,10 @@ spec:
                 secretKeyRef:
                   name: pks-api-monitor
                   key: uaa-cli-secret
-#          volumeMounts:
-#            - name: certs
-#              mountPath: /etc/pks-monitor/certs
-#              readOnly: true
+          volumeMounts:
+            - name: certs
+              mountPath: /etc/pks-monitor/certs
+              readOnly: true
           ports:
             - containerPort: 8080
               name: http
@@ -76,20 +80,20 @@ spec:
   selector:
     app: pks-monitor
 
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: pks-monitor
-  labels:
-    app: pks-monitor
-    release: "monitoring"
-spec:
-  selector:
-    matchLabels:
-      app: pks-monitor
-      release: monitoring
-  endpoints:
-    - port: http-metrics
-      interval: 1m
-      scrapeTimeout: 30s
+#---
+#apiVersion: monitoring.coreos.com/v1
+#kind: ServiceMonitor
+#metadata:
+#  name: pks-monitor
+#  labels:
+#    app: pks-monitor
+#    release: "monitoring"
+#spec:
+#  selector:
+#    matchLabels:
+#      app: pks-monitor
+#      release: monitoring
+#  endpoints:
+#    - port: http-metrics
+#      interval: 1m
+#      scrapeTimeout: 30s
