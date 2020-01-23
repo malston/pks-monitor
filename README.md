@@ -12,7 +12,7 @@ uaa create-client <uaa-cli-id> -s <uaa-cli-secret> --authorized_grant_types clie
 ```
 
 ### API TLS:
-Fetch PKS TLS pem certificate.
+Fetch PKS TLS pem certificate from Credhub or Ops Manager.
 
 ### Running locally
  
