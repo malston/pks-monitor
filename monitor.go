@@ -20,12 +20,6 @@ var (
 		Name:      "pks_api_up",
 		Help:      "Is the Pks Api up?",
 	})
-	pksApiLatency = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "wf",
-		Subsystem: "opp",
-		Name:      "pks_api_latency",
-		Help:      "Duration time for a API call",
-	})
 
 	pksApiClusters = ":9021/v1/clusters"
 	pksApiAuth     = ":8443/oauth/token"
@@ -33,13 +27,13 @@ var (
 
 func init() {
 	prometheus.MustRegister(pksApiUp)
-	prometheus.MustRegister(pksApiLatency)
 }
 
 type PksMonitor struct {
-	apiAddress  string
-	accessToken string
-	client      *http.Client
+	apiAddress     string
+	apiAuthAddress string
+	accessToken    string
+	client         *http.Client
 
 	uaaCliId     string
 	uaaCliSecret string
@@ -71,10 +65,11 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	}
 
 	pksMonitor := &PksMonitor{
-		apiAddress:   api,
-		client:       client,
-		uaaCliId:     cliId,
-		uaaCliSecret: cliSecret,
+		apiAddress:     api,
+		apiAuthAddress: api,
+		client:         client,
+		uaaCliId:       cliId,
+		uaaCliSecret:   cliSecret,
 	}
 
 	token, err := pksMonitor.authenticateApi()
@@ -86,7 +81,7 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 		pksMonitor.accessToken = token.AccessToken
 	}
 
-	fmt.Printf("monitoring: %s\n", api)
+	fmt.Printf("monitoring: %s - %s\n", api, time.Now().Format("2006-01-02 15:04:05"))
 
 	return pksMonitor, nil
 }
@@ -104,12 +99,7 @@ func (pks PksMonitor) CheckAPI() error {
 	return errors.Wrap(err, "monitor: unable to call API")
 }
 
-func (pks PksMonitor) callApi() (bool, error) {
-	start := time.Now()
-	defer func() {
-		pksApiLatency.Set(float64(time.Since(start).Milliseconds()))
-	}()
-
+func (pks *PksMonitor) callApi() (bool, error) {
 	// build api uri to list clusters
 	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiClusters)
 	method := "GET"
@@ -146,7 +136,7 @@ func (pks PksMonitor) callApi() (bool, error) {
 
 	// check success of api call
 	if res.StatusCode != 200 {
-		fmt.Printf("moniotr: error calling pks api. status code: %d\n", res.StatusCode)
+		fmt.Printf("monitor: error calling pks api. status code: %d\n", res.StatusCode)
 		return false, nil
 	}
 
@@ -161,7 +151,7 @@ func (pks PksMonitor) authenticateApi() (t *token, err error) {
 	}()
 
 	// build api uri to authenticate
-	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiAuth)
+	url := fmt.Sprintf("%s%s", pks.apiAuthAddress, pksApiAuth)
 	method := "POST"
 
 	oauthParams := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials&token_format=opaque", pks.uaaCliId, pks.uaaCliSecret)
@@ -196,6 +186,8 @@ func (pks PksMonitor) authenticateApi() (t *token, err error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "monitor: couldn't unmarshal token response")
 	}
+
+	fmt.Printf("authenticated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	t = &token
 	return t, nil
 }
