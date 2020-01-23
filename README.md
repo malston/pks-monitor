@@ -2,8 +2,9 @@
 
 Monitoring tool to check if PKS API is up and expose metric to Prometheus.
 
-## Usage
+## Requirements
 
+###UAA Client 
 Login in UAA as admin and create a UAA Cli for this service:
 ```shell script
 uaa get-client-credentials-token admin --format=opaque -s <Pks Uaa Management Admin Client secret>
@@ -13,6 +14,29 @@ uaa create-client <uaa-cli-id> -s <uaa-cli-secret> --authorized_grant_types clie
 
 ### API TLS:
 Fetch PKS TLS pem certificate from Credhub or Ops Manager.
+
+## Running on Kubernetes
+
+Build image with `./build-image.sh`
+
+Create a `Secret` named `pks-api-monitor` with the api and uaa configs:
+```shell script
+kubectl create secret generic pks-api-monitor \
+--from-literal=pks-api=$PKS_API \
+--from-literal=uaa-cli-id=$UAA_CLI_ID \
+--from-literal=uaa-cli-secret=$UAA_CLI_SECRET
+```
+
+Create a `Secret` named `pks-api-cert` with PKS TLS cert:
+```shell script
+kubectl create secret generic pks-api-cert --from-file=cert.pem
+```
+
+Modify `deployment.yaml` changing the container image to match the image built and pushed with `./build-image.sh`
+
+Apply the deployment: `kubectl apply -f deployment.yaml`
+
+## Development
 
 ### Running locally
  
@@ -54,23 +78,3 @@ docker run -it -p 8080:8080 --env-file=envvars --mount source=myvol,target=/etc/
 
 Look for `pks_api_up` metric at: localhost:8080/metrics
 
-### Running on Kubernetes
-
-Build image with `./build-image.sh`
-
-Create a `Secret` named `pks-api-monitor` with the api and uaa configs:
-```shell script
-kubectl create secret generic pks-api-monitor \
---from-literal=pks-api=$PKS_API \
---from-literal=uaa-cli-id=$UAA_CLI_ID \
---from-literal=uaa-cli-secret=$UAA_CLI_SECRET
-```
-
-Create a `Secret` named `pks-api-cert` with PKS TLS cert:
-```shell script
-kubectl create secret generic pks-api-cert --from-file=cert.pem
-```
-
-Modify `deployment.yaml` changing the container image to match the image built and pushed with `./build-image.sh`
-
-Apply the deployment: `kubectl apply -f deployment.yaml`
