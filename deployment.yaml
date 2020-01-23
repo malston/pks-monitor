@@ -24,7 +24,7 @@ spec:
           secret:
             secretName: pks-api-cert
       containers:
-        - image: "victorpupim/pks-monitor:0.0.1"
+        - image: "victorpupim/pks-monitor:1.0.0"
           name: pks-monitor
           imagePullPolicy: Always
           env:
