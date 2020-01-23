@@ -30,10 +30,10 @@ func init() {
 }
 
 type PksMonitor struct {
-	apiAddress     string
-	apiAuthAddress string
-	accessToken    string
-	client         *http.Client
+	pksApiAddr  string
+	authApiAddr string
+	accessToken string
+	client      *http.Client
 
 	uaaCliId     string
 	uaaCliSecret string
@@ -65,11 +65,11 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	}
 
 	pksMonitor := &PksMonitor{
-		apiAddress:     api,
-		apiAuthAddress: api,
-		client:         client,
-		uaaCliId:       cliId,
-		uaaCliSecret:   cliSecret,
+		pksApiAddr:   fmt.Sprintf("%s%s", api, pksApiClusters),
+		authApiAddr:  fmt.Sprintf("%s%s", api, pksApiAuth),
+		client:       client,
+		uaaCliId:     cliId,
+		uaaCliSecret: cliSecret,
 	}
 
 	token, err := pksMonitor.authenticateApi()
@@ -100,12 +100,10 @@ func (pks PksMonitor) CheckAPI() error {
 }
 
 func (pks *PksMonitor) callApi() (bool, error) {
-	// build api uri to list clusters
-	url := fmt.Sprintf("%s%s", pks.apiAddress, pksApiClusters)
 	method := "GET"
 
 	// create request object
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, pks.pksApiAddr, nil)
 	if err != nil {
 		return false, errors.Wrap(err, "monitor: unable to create new request")
 	}
@@ -151,14 +149,12 @@ func (pks PksMonitor) authenticateApi() (t *token, err error) {
 	}()
 
 	// build api uri to authenticate
-	url := fmt.Sprintf("%s%s", pks.apiAuthAddress, pksApiAuth)
-	method := "POST"
-
 	oauthParams := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials&token_format=opaque", pks.uaaCliId, pks.uaaCliSecret)
 	payload := strings.NewReader(oauthParams)
+	method := "POST"
 
 	// create request object
-	req, err := http.NewRequest(method, url, payload)
+	req, err := http.NewRequest(method, pks.authApiAddr, payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "monitor: unable to create new request")
 	}

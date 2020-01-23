@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/pupimvictor/pks-monitor"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,10 +25,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	//set default api check interval to 30 seconds
+	intervalDuration := time.Second * 30
+
+	//check for custom interval
+	interval := os.Getenv("API_CHECK_INTERVAL_SECS")
+	if interval != "" {
+		intervalTime, err := time.ParseDuration(fmt.Sprintf("%s%s", interval, "s"))
+		if err != nil {
+			intervalDuration = intervalTime
+		}
+	}
+
 	pksMonitor, err := monitor.NewPksMonitor(api, cliId, cliSecret)
 	if err != nil {
-		//log.Fatal(err)
 		fmt.Printf("main: could not authenticate to api: %+v\n", err)
+		log.Fatal(err)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -50,12 +63,11 @@ func main() {
 	monitorLoop:
 		for {
 			select {
-			// executes api request every 30 seconds.
-			case <-time.Tick(30 * time.Second):
+			// executes api request every `intervalDuration` seconds.
+			case <-time.Tick(intervalDuration):
 				err := pksMonitor.CheckAPI()
 				if err != nil {
 					fmt.Printf("main: could not check api: %+v\n", err)
-					//break monitorLoop
 				}
 
 			// stop process because server stopped working

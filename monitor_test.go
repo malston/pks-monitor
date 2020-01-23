@@ -52,13 +52,11 @@ func TestPksMonitor_callApi(t *testing.T) {
 			}))
 
 			pks := PksMonitor{
-				apiAddress:     svr.URL,
-				apiAuthAddress: svr.URL,
-				accessToken:    tt.fields.accessToken,
-				client:         svr.Client(),
+				pksApiAddr:  svr.URL,
+				authApiAddr: svr.URL,
+				accessToken: tt.fields.accessToken,
+				client:      svr.Client(),
 			}
-			pksApiClusters = ""
-			pksApiAuth = ""
 			got, err := pks.callApi()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("callApi() error = %v, wantErr %v", err, tt.wantErr)
@@ -126,14 +124,11 @@ func TestPksMonitor_callApi_Reauthenticate(t *testing.T) {
 			}))
 
 			pks := PksMonitor{
-				apiAddress:     svr.URL,
-				apiAuthAddress: authSvr.URL,
-				accessToken:    tt.fields.accessToken,
-				client:         svr.Client(),
+				pksApiAddr:  svr.URL,
+				authApiAddr: authSvr.URL,
+				accessToken: tt.fields.accessToken,
+				client:      svr.Client(),
 			}
-			//setting api path to empty so the mock server can be called
-			pksApiClusters = ""
-			pksApiAuth = ""
 			_, err := pks.callApi()
 			gotToken := pks.accessToken
 			if (err != nil) != tt.wantErr {
@@ -196,14 +191,12 @@ func TestPksMonitor_authenticateApi(t *testing.T) {
 			}))
 
 			pks := PksMonitor{
-				apiAddress:     svr.URL,
-				apiAuthAddress: svr.URL,
-				client:         svr.Client(),
-				uaaCliSecret:   tt.fields.uaaCliSecret,
-				uaaCliId:       tt.fields.uaaCliId,
+				pksApiAddr:   svr.URL,
+				authApiAddr:  svr.URL,
+				client:       svr.Client(),
+				uaaCliSecret: tt.fields.uaaCliSecret,
+				uaaCliId:     tt.fields.uaaCliId,
 			}
-			//setting api path to empty so the mock server can be called
-			pksApiAuth = ""
 			got, err := pks.authenticateApi()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("callApi() error = %v, wantErr %v", err, tt.wantErr)
