@@ -2,8 +2,9 @@
 package netfakes
 
 import (
-	"pks-cli/net"
 	"sync"
+
+	"github.com/pupimvictor/pks-monitor/net"
 )
 
 type FakeTokenRefresher struct {

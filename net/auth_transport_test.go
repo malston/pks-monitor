@@ -13,7 +13,7 @@ import (
 	"pks-cli/net/netfakes"
 )
 
-var _ = Describe("RefreshTransport", func() {
+var _ = Describe("AuthTransport", func() {
 	var (
 		mockAPI   *netfakes.FakeRoundTripper
 		mockUAA   *netfakes.FakeTokenRefresher

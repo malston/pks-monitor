@@ -3,13 +3,9 @@ package net
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
-	"fmt"
-	"golang.org/x/net/publicsuffix"
-	"io/ioutil"
+	"github.com/pkg/errors"
+
 	"net/http"
-	"net/http/cookiejar"
-	"os"
 	"time"
 )
 
@@ -19,18 +15,14 @@ func HTTPClient(insecure bool, cert []byte) (*http.Client, error) {
 	if !insecure {
 		certPool, err := CertPool(cert)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "net: could not create Cert Pool")
 		}
 		transport = Transport(false, certPool)
-	}
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	if err != nil {
-		return nil, fmt.Errorf("http: couldn't create cookie jar: %+v\n", err)
 	}
 	return &http.Client{
 		Transport: transport,
 		Timeout:   60 * time.Second,
-		Jar: jar,
+		//Jar:       nil,
 	}, nil
 }
 
@@ -56,31 +48,3 @@ func CertPool(cert []byte) (*x509.CertPool, error) {
 	return certPool, nil
 }
 
-// ParseCert a helper method to parse a string as a cert or path to a cert
-// and validate that it is a correctly formatted cert.
-func ParseCert(caCertPath string) ([]byte, error) {
-	var pemBytes []byte
-	if caCertPath == "" {
-		return nil, errors.New("CA Cert path missing")
-	}
-	_, err := os.Stat(caCertPath)
-	believeInputIsFilePath := err == nil
-	if err != nil {
-		pemBytes = []byte(caCertPath)
-	} else {
-		pemBytes, err = ioutil.ReadFile(caCertPath)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to read file: %s", caCertPath)
-		}
-	}
-	certPool := x509.NewCertPool()
-	ok := certPool.AppendCertsFromPEM(pemBytes)
-	if !ok {
-		if believeInputIsFilePath {
-			return nil, fmt.Errorf("Failed to parse certificate from file: %s", caCertPath)
-		}
-		return nil, fmt.Errorf("Failed to parse certificate from command line (or file does not exist): %s", caCertPath)
-	}
-
-	return pemBytes, nil
-}

@@ -2,8 +2,9 @@
 package netfakes
 
 import (
-	"pks-cli/net"
 	"sync"
+
+	"github.com/pupimvictor/pks-monitor/net"
 )
 
 type FakeTokenStore struct {
@@ -17,24 +18,9 @@ type FakeTokenStore struct {
 	getAccessTokenReturnsOnCall map[int]struct {
 		result1 string
 	}
-	GetRefreshTokenStub        func() string
-	getRefreshTokenMutex       sync.RWMutex
-	getRefreshTokenArgsForCall []struct {
-	}
-	getRefreshTokenReturns struct {
-		result1 string
-	}
-	getRefreshTokenReturnsOnCall map[int]struct {
-		result1 string
-	}
 	SetAccessTokenStub        func(string)
 	setAccessTokenMutex       sync.RWMutex
 	setAccessTokenArgsForCall []struct {
-		arg1 string
-	}
-	SetRefreshTokenStub        func(string)
-	setRefreshTokenMutex       sync.RWMutex
-	setRefreshTokenArgsForCall []struct {
 		arg1 string
 	}
 	invocations      map[string][][]interface{}
@@ -93,58 +79,6 @@ func (fake *FakeTokenStore) GetAccessTokenReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *FakeTokenStore) GetRefreshToken() string {
-	fake.getRefreshTokenMutex.Lock()
-	ret, specificReturn := fake.getRefreshTokenReturnsOnCall[len(fake.getRefreshTokenArgsForCall)]
-	fake.getRefreshTokenArgsForCall = append(fake.getRefreshTokenArgsForCall, struct {
-	}{})
-	fake.recordInvocation("GetRefreshToken", []interface{}{})
-	fake.getRefreshTokenMutex.Unlock()
-	if fake.GetRefreshTokenStub != nil {
-		return fake.GetRefreshTokenStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.getRefreshTokenReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeTokenStore) GetRefreshTokenCallCount() int {
-	fake.getRefreshTokenMutex.RLock()
-	defer fake.getRefreshTokenMutex.RUnlock()
-	return len(fake.getRefreshTokenArgsForCall)
-}
-
-func (fake *FakeTokenStore) GetRefreshTokenCalls(stub func() string) {
-	fake.getRefreshTokenMutex.Lock()
-	defer fake.getRefreshTokenMutex.Unlock()
-	fake.GetRefreshTokenStub = stub
-}
-
-func (fake *FakeTokenStore) GetRefreshTokenReturns(result1 string) {
-	fake.getRefreshTokenMutex.Lock()
-	defer fake.getRefreshTokenMutex.Unlock()
-	fake.GetRefreshTokenStub = nil
-	fake.getRefreshTokenReturns = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *FakeTokenStore) GetRefreshTokenReturnsOnCall(i int, result1 string) {
-	fake.getRefreshTokenMutex.Lock()
-	defer fake.getRefreshTokenMutex.Unlock()
-	fake.GetRefreshTokenStub = nil
-	if fake.getRefreshTokenReturnsOnCall == nil {
-		fake.getRefreshTokenReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.getRefreshTokenReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
 func (fake *FakeTokenStore) SetAccessToken(arg1 string) {
 	fake.setAccessTokenMutex.Lock()
 	fake.setAccessTokenArgsForCall = append(fake.setAccessTokenArgsForCall, struct {
@@ -176,48 +110,13 @@ func (fake *FakeTokenStore) SetAccessTokenArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeTokenStore) SetRefreshToken(arg1 string) {
-	fake.setRefreshTokenMutex.Lock()
-	fake.setRefreshTokenArgsForCall = append(fake.setRefreshTokenArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("SetRefreshToken", []interface{}{arg1})
-	fake.setRefreshTokenMutex.Unlock()
-	if fake.SetRefreshTokenStub != nil {
-		fake.SetRefreshTokenStub(arg1)
-	}
-}
-
-func (fake *FakeTokenStore) SetRefreshTokenCallCount() int {
-	fake.setRefreshTokenMutex.RLock()
-	defer fake.setRefreshTokenMutex.RUnlock()
-	return len(fake.setRefreshTokenArgsForCall)
-}
-
-func (fake *FakeTokenStore) SetRefreshTokenCalls(stub func(string)) {
-	fake.setRefreshTokenMutex.Lock()
-	defer fake.setRefreshTokenMutex.Unlock()
-	fake.SetRefreshTokenStub = stub
-}
-
-func (fake *FakeTokenStore) SetRefreshTokenArgsForCall(i int) string {
-	fake.setRefreshTokenMutex.RLock()
-	defer fake.setRefreshTokenMutex.RUnlock()
-	argsForCall := fake.setRefreshTokenArgsForCall[i]
-	return argsForCall.arg1
-}
-
 func (fake *FakeTokenStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.getAccessTokenMutex.RLock()
 	defer fake.getAccessTokenMutex.RUnlock()
-	fake.getRefreshTokenMutex.RLock()
-	defer fake.getRefreshTokenMutex.RUnlock()
 	fake.setAccessTokenMutex.RLock()
 	defer fake.setAccessTokenMutex.RUnlock()
-	fake.setRefreshTokenMutex.RLock()
-	defer fake.setRefreshTokenMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

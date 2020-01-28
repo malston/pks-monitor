@@ -1,12 +1,11 @@
 package monitor
 
 import (
-	"github.com/pupimvictor/pks-monitor/uaa"
-	"net"
+	"github.com/pkg/errors"
 	pksNet "github.com/pupimvictor/pks-monitor/net"
+	"github.com/pupimvictor/pks-monitor/uaa"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 // Config represents the configuration for the PKS CLI. This includes things
@@ -18,8 +17,6 @@ type Config struct {
 	SkipSSLVerification bool   `yaml:"skip_ssl_verification"`
 	AccessToken         string `yaml:"access_token"`
 	RefreshToken        string `yaml:"refresh_token"`
-
-	Headers *http.Header
 
 	UaaCliId     string
 	UaaCliSecret string
@@ -37,55 +34,38 @@ func (c *Config) GetAccessToken() string {
 	return c.AccessToken
 }
 
-// GetRefreshToken returns the refresh token.
-func (c *Config) GetRefreshToken() string {
-	return c.RefreshToken
-}
-
 // SetAccessToken sets the access token.
 func (c *Config) SetAccessToken(at string) {
 	c.AccessToken = at
 }
 
-// SetRefreshToken sets the refresh token.
-func (c *Config) SetRefreshToken(rt string) {
-	c.RefreshToken = rt
-}
-
-func CreateHttpClient (c *Config) (*http.Client, error) {
-	uaaHTTPClient, err := pksNet.HTTPClient(c.SkipSSLVerification, []byte(c.CACert))
-	if err != nil {
-		return nil, err
-	}
+func CreateHttpClient(c *Config) (*http.Client, error) {
 	apiHTTPClient, err := pksNet.HTTPClient(c.SkipSSLVerification, []byte(c.CACert))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "monitor: could not create HTTPClient")
 	}
-
-	u, err := url.Parse(c.API)
-	if err != nil {
-		return nil, err
-	}
-	host := u.Host
-	if strings.Contains(host, ":") {
-		var err error
-		host, _, err = net.SplitHostPort(host)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	uaaClient := &uaa.Client{
-		AuthURL:    u.Scheme + "://" + host + ":" + UAAPort,
-		Client: uaaHTTPClient,
-	}
-
-	apiHTTPClient.Transport = pksNet.NewRefreshTransport(
+	apiHTTPClient.Transport = pksNet.NewAuthTransport(
 		apiHTTPClient.Transport,
-		uaaClient,
 		c,
 		c.UaaCliId,
 		c.UaaCliSecret,
 	)
 	return apiHTTPClient, nil
+}
+
+func CreateUaaClient(c *Config) (*uaa.Client, error) {
+	uaaHTTPClient, err := pksNet.HTTPClient(c.SkipSSLVerification, []byte(c.CACert))
+	if err != nil {
+		return nil, errors.Wrap(err, "monitor: could not create HTTPClient")
+	}
+	u, err := url.Parse(c.API)
+	if err != nil {
+		return nil, err
+	}
+	u.Host = u.Host + ":" + UAAPort
+	uaaClient := &uaa.Client{
+		AuthURL: *u,
+		Client:  uaaHTTPClient,
+	}
+	return uaaClient, nil
 }
