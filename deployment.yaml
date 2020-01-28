@@ -24,7 +24,7 @@ spec:
           secret:
             secretName: pks-api-cert
       containers:
-        - image: "victorpupim/pks-monitor:1.0.0"
+        - image: "victorpupim/pks-monitor:1.1.0"
           name: pks-monitor
           imagePullPolicy: Always
           env:
@@ -56,7 +56,7 @@ spec:
               httpGet:
                 port: 8080
                 path: "/prestop"
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 0
 
 ---
 apiVersion: v1

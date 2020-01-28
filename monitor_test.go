@@ -202,7 +202,7 @@ func TestPksMonitor_authenticateApi(t *testing.T) {
 				t.Errorf("callApi() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if (got != nil) && got.AccessToken != tt.want {
+			if  got != tt.want {
 				t.Errorf("callApi() got = %v, want %v", got, tt.want)
 			}
 			svr.Close()
