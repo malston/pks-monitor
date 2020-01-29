@@ -6,8 +6,8 @@ ENV PORT 8080
 COPY . /go/src/${APP_NAME}
 WORKDIR /go/src/${APP_NAME}
 
-RUN go get ./
-RUN go build -o ${APP_NAME} ./cmd/main.go
+# RUN go get ./
+RUN go build -o ${APP_NAME} -mod=vendor ./cmd/main.go
 
 CMD ./${APP_NAME}
 
