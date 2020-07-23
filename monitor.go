@@ -38,7 +38,7 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 	// Create a CA certificate pool and add cert.pem to it
 	caCert, err := ioutil.ReadFile("/etc/pks-monitor/certs/cert.pem")
 	if err != nil {
-		return nil, errors.Wrap(err, "monitor: couldn't read certs")
+		return nil, errors.Wrap(err, "pks-monitor: couldn't read certs")
 	}
 
 	//check if URL is properly formatted
@@ -65,13 +65,13 @@ func NewPksMonitor(api, cliId, cliSecret string) (*PksMonitor, error) {
 
 	err = AuthenticateApi(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "monitor: couldn't login to pks")
+		return nil, errors.Wrap(err, "pks-monitor: couldn't login to pks")
 	}
 	//fmt.Printf("fresh token: %+v\n", config.AccessToken)
 
 	client, err := CreateHttpClient(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "monitor: couldnt't create http client")
+		return nil, errors.Wrap(err, "pks-monitor: couldnt't create http client")
 	}
 
 	pksMonitor := &PksMonitor{
@@ -94,7 +94,7 @@ func (pks PksMonitor) CheckAPI() error {
 	}
 	fmt.Printf("pks api is up: %t\n", ok)
 
-	return errors.Wrap(err, "monitor: unable to call API")
+	return errors.Wrap(err, "pks-monitor: unable to call API")
 }
 
 func (pks *PksMonitor) callApi() (bool, error) {
@@ -104,7 +104,7 @@ func (pks *PksMonitor) callApi() (bool, error) {
 	// create request object
 	req, err := http.NewRequest(method, reqUrl, nil)
 	if err != nil {
-		return false, errors.Wrap(err, "monitor: unable to create new request")
+		return false, errors.Wrap(err, "pks-monitor: unable to create new request")
 	}
 
 	req.Header.Add("Accept", "application/json")
@@ -113,7 +113,7 @@ func (pks *PksMonitor) callApi() (bool, error) {
 	// making api request
 	res, err := pks.client.Do(req)
 	if err != nil {
-		return false, errors.Wrap(err, "monitor: unable to make API request")
+		return false, errors.Wrap(err, "pks-monitor: unable to make API request")
 	}
 	defer res.Body.Close()
 
@@ -122,14 +122,14 @@ func (pks *PksMonitor) callApi() (bool, error) {
 		fmt.Println("reauthenticate...")
 		err := AuthenticateApi(pks.config)
 		if err != nil {
-			return false, errors.Wrap(err, "monitoring: unable to reauthenticate: %+v\n")
+			return false, errors.Wrap(err, "pks-monitor: unable to reauthenticate: %+v\n")
 		}
 		return true, nil
 	}
 
 	// check success of api call
 	if res.StatusCode != 200 {
-		fmt.Printf("monitor: PKS API seems to be down - response status code: %d\n", res.StatusCode)
+		fmt.Printf("pks-monitor: PKS API seems to be down - response status code: %d\n", res.StatusCode)
 		return false, nil
 	}
 
@@ -149,16 +149,16 @@ func AuthenticateApi(c *Config) error {
 	}
 	response, err := uaaClient.Client.Do(request)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Unable to send a request to API: %s", request.RequestURI))
+		return errors.Wrap(err, fmt.Sprintf("Unable to send a HEAD request to UAA: %s", request.RequestURI))
 	}
 	if response.StatusCode == http.StatusUnauthorized {
-		return errors.New("monitor: AuthenticateApi - Credentials were rejected, please try again.")
+		return errors.New("pks-pks-monitor: credentials were rejected")
 	}
 
 	// call uaa api for access token
 	token, err := uaaClient.ClientCredentialGrant(c.UaaCliId, c.UaaCliSecret)
 	if err != nil {
-		return errors.Wrap(err, "monitor: couldn't get token")
+		return errors.Wrap(err, "pks-pks-monitor: couldn't get token")
 	}
 
 	c.AccessToken = token.AccessToken

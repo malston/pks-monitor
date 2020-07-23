@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-docker_image_name="${1:-"victorpupim/pks-monitor"}"
+docker_image_name="${1:-"malston/pks-monitor"}"
 docker_image_tag="${2:-"1.1.0"}"
 
 docker build -t "${docker_image_name}:${docker_image_tag}" .
