@@ -2,15 +2,16 @@ package monitor
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	pksNet "github.com/pupimvictor/pks-monitor/net"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	pksNet "github.com/pupimvictor/pks-monitor/net"
 )
 
 var (
@@ -117,7 +118,7 @@ func (pks *PksMonitor) callApi() (bool, error) {
 	defer res.Body.Close()
 
 	// check if api resp error is a expired token and try to reconnect
-	if expired, _ := pksNet.TokenExpired(res) ; expired {
+	if expired, _ := pksNet.TokenExpired(res); expired {
 		fmt.Println("reauthenticate...")
 		err := AuthenticateApi(pks.config)
 		if err != nil {
@@ -148,7 +149,7 @@ func AuthenticateApi(c *Config) error {
 	}
 	response, err := uaaClient.Client.Do(request)
 	if err != nil {
-		return errors.Wrap(err, "Unable to send a request to API: %s")
+		return errors.Wrap(err, fmt.Sprintf("Unable to send a request to API: %s", request.RequestURI))
 	}
 	if response.StatusCode == http.StatusUnauthorized {
 		return errors.New("monitor: AuthenticateApi - Credentials were rejected, please try again.")
@@ -163,4 +164,3 @@ func AuthenticateApi(c *Config) error {
 	c.AccessToken = token.AccessToken
 	return nil
 }
-
